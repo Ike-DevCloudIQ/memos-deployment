@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: memos-db
+    environment:
+      POSTGRES_USER: memos
+      POSTGRES_PASSWORD: memos_local_dev
+      POSTGRES_DB: memos
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  memos:
+    build:
+      context: ../../memos-source
+      dockerfile: ../memos-deployment/app/Dockerfile
+    container_name: memos-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DSN: postgres://memos:memos_local_dev@postgres:5432/memos
+    ports:
+      - "5230:8081"
+    volumes:
+      - memos_data:/var/opt/memos
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  memos_data:
