@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: memos-project
+  namespace: argocd
+spec:
+  description: Restricted project for memos GitOps application
+  sourceRepos:
+    - https://github.com/Ike-DevCloudIQ/memos-deployment
+  destinations:
+    - namespace: memos
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceBlacklist: []
+  orphanedResources:
+    warn: true
