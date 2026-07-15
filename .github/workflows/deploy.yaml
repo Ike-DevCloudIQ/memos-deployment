@@ -47,7 +47,10 @@ jobs:
 
       # Step 4: Set up Buildx (required for gha cache backend)
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
 
       # Step 5: Set image metadata (tag with short commit SHA)
       - name: Set image metadata
@@ -61,14 +64,13 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
+          builder: ${{ steps.buildx.outputs.name }}
           context: .                        # Build from repository root
           file: app/Dockerfile              # Path to Dockerfile
           push: true                        # Push to ECR after build
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.tag }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
-          cache-from: type=gha             # Use GitHub Actions cache for faster builds
-          cache-to: type=gha,mode=max
 
   # ==============================================================
   # Job 2: Update Kubernetes manifest with new image tag
