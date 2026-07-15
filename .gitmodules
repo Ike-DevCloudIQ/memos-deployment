@@ -1,0 +1,3 @@
+[submodule "src/memos"]
+	path = src/memos
+	url = https://github.com/usememos/memos.git

@@ -28,9 +28,11 @@ jobs:
       image-tag: ${{ steps.meta.outputs.tag }}
 
     steps:
-      # Step 1: Get the latest code
+      # Step 1: Get the latest code (including vendored Memos source submodule)
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       # Step 2: Configure AWS credentials using OIDC
       # No long-lived access keys — uses GitHub's OIDC provider
@@ -65,7 +67,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           builder: ${{ steps.buildx.outputs.name }}
-          context: .                        # Build from repository root
+          context: src/memos                # Build from vendored Memos source
           file: app/Dockerfile              # Path to Dockerfile
           push: true                        # Push to ECR after build
           tags: |
