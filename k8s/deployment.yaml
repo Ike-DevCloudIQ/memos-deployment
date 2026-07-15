@@ -1,0 +1,293 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: memos
+  labels:
+    name: memos
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: memos-config
+  namespace: memos
+data:
+  # Application configuration
+  MEMOS_PORT: "5230"
+  MEMOS_MODE: "prod"
+  DRIVER: "postgres"
+  DSN_DRIVER: "postgres"
+  # Logging
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: memos-db-secret
+  namespace: memos
+type: Opaque
+stringData:
+  # Database connection details
+  # These will be populated from Secrets Manager by deployment script
+  DB_HOST: "memos-postgres.c9akciq32.us-west-1.rds.amazonaws.com"
+  DB_PORT: "5432"
+  DB_NAME: "memos"
+  DB_USER: "memos_user"
+  DB_PASSWORD: "CHANGE_ME_FROM_SECRETS_MANAGER"
+  # Full connection string
+  DSN: "postgresql://memos_user:CHANGE_ME@memos-postgres.c9akciq32.us-west-1.rds.amazonaws.com:5432/memos?sslmode=disable"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memos
+  namespace: memos
+  labels:
+    app: memos
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: memos
+  template:
+    metadata:
+      labels:
+        app: memos
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5230"
+        prometheus.io/path: "/api/v1/metrics"
+    spec:
+      serviceAccountName: memos
+      
+      # Pod disruption budget for high availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - memos
+              topologyKey: kubernetes.io/hostname
+      
+      containers:
+      - name: memos
+        image: ghcr.io/usememos/memos:latest
+        imagePullPolicy: IfNotPresent
+        
+        ports:
+        - name: http
+          containerPort: 5230
+          protocol: TCP
+        
+        # Environment variables from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: memos-config
+        
+        # Environment variables from Secret
+        env:
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: memos-db-secret
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: memos-db-secret
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: memos-db-secret
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: memos-db-secret
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: memos-db-secret
+              key: DB_PASSWORD
+        - name: DSN
+          valueFrom:
+            secretKeyRef:
+              name: memos-db-secret
+              key: DSN
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        
+        # Startup probe (Kubernetes 1.18+)
+        startupProbe:
+          httpGet:
+            path: /
+            port: http
+          failureThreshold: 30
+          periodSeconds: 10
+        
+        # Resource requests and limits
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+        
+        # Volume mounts
+        volumeMounts:
+        - name: memos-data
+          mountPath: /var/opt/memos
+      
+      # Pod security context
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Service account
+      serviceAccountName: memos
+      automountServiceAccountToken: false
+      
+      # Tolerations for node pool (if using)
+      tolerations: []
+      
+      # Volumes
+      volumes:
+      - name: memos-data
+        emptyDir:
+          sizeLimit: 1Gi
+      
+      # DNS configuration
+      dnsPolicy: ClusterFirst
+      
+      # Termination grace period
+      terminationGracePeriodSeconds: 30
+      
+      # Restart policy
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: memos
+  namespace: memos
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memos
+  namespace: memos
+  labels:
+    app: memos
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  type: LoadBalancer
+  selector:
+    app: memos
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: http
+    protocol: TCP
+  sessionAffinity: None
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: memos
+  namespace: memos
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: memos
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: memos
+  namespace: memos
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: memos
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 1
+        periodSeconds: 60
+      selectPolicy: Max
