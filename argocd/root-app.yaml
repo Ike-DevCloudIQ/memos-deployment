@@ -1,0 +1,37 @@
+# App-of-apps ROOT Application
+# This single Application watches argocd/apps/ and creates one child
+# Application per manifest found there. Syncing this app makes every
+# child app appear as its own tile in the Argo CD overview.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  # Source: the folder of child Application manifests
+  source:
+    repoURL: https://github.com/Ike-DevCloudIQ/memos-deployment
+    targetRevision: HEAD
+    path: argocd/apps
+
+  # Destination: the Argo CD control-plane namespace (children live here)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+
+  info:
+    - name: Pattern
+      value: app-of-apps
+    - name: Children
+      value: memos, secrets, cloudwatch, argocd

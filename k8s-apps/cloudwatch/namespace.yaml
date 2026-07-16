@@ -1,0 +1,10 @@
+# Landing-zone namespace for CloudWatch agent / Fluent Bit
+# (Container Insights). Placeholder so the `cloudwatch` Argo app is real
+# and Healthy. Add the agent DaemonSet/Helm chart here to ship logs.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: amazon-cloudwatch
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    purpose: observability-agent

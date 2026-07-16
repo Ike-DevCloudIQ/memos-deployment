@@ -1,0 +1,33 @@
+# Child app: cloudwatch (placeholder / scaffold)
+# Manages the `amazon-cloudwatch` namespace as a landing zone for the
+# CloudWatch agent / Fluent Bit (Container Insights). Real + Healthy
+# today; drop the agent manifests here later to ship logs/metrics.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudwatch
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Ike-DevCloudIQ/memos-deployment
+    targetRevision: HEAD
+    path: k8s-apps/cloudwatch
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: amazon-cloudwatch
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+  info:
+    - name: Purpose
+      value: CloudWatch agent / Fluent Bit landing zone (scaffold)

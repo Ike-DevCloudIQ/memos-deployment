@@ -1,3 +1,6 @@
+# Child app: memos (the main application)
+# Kept in the restricted memos-project. Identical behaviour to the
+# previous standalone argocd-application.yaml, now managed by root.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -7,38 +10,25 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: memos-project
-  
-  # Where to deploy FROM
+
   source:
     repoURL: https://github.com/Ike-DevCloudIQ/memos-deployment
     targetRevision: HEAD
     path: k8s
-  
-  # Where to deploy TO
+
   destination:
     server: https://kubernetes.default.svc
     namespace: memos
-  
-  # How to sync
+
   syncPolicy:
-    # Automatically sync when Git changes
     automated:
-      # Prune: delete resources removed from Git
       prune: true
-      # SelfHeal: fix cluster drift (manual kubectl changes)
       selfHeal: true
-    
-    # Options
     syncOptions:
-      # Create namespace if it doesn't exist
       - CreateNamespace=true
-      # Respect resource finalizers
       - PruneLast=true
-  
-  # Notification settings
+
   info:
-    - name: Documentation
-      value: https://github.com/Ike-DevCloudIQ/memos-deployment/tree/main/docs
     - name: Repository
       value: https://github.com/Ike-DevCloudIQ/memos-deployment
     - name: Sync Policy

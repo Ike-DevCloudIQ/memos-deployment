@@ -1,0 +1,45 @@
+# Child app: argocd (self-manage Argo CD via GitOps)
+#
+# ⚠️  MANUAL SYNC ON PURPOSE — DO NOT ENABLE automated sync until the
+#     Helm chart version + values below exactly match your CURRENTLY
+#     INSTALLED Argo CD. Your Argo CD was installed from the plain
+#     install manifests (kubectl apply), so a Helm-rendered sync WILL
+#     show large diffs and, if synced blindly, can disrupt Argo itself.
+#
+# This tile lets Argo CD appear in the overview. To make it Synced:
+#   1. Check installed version:  argocd version --short   (or the argocd-server image tag)
+#   2. Set targetRevision to the matching argo-cd chart version.
+#   3. Add a values block that mirrors your install, then Sync manually.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-cd
+    # TODO: align this with your installed Argo CD version before syncing.
+    targetRevision: 7.7.0
+    helm:
+      releaseName: argocd
+      values: |
+        # Populate to match your install before manual sync.
+        # Left intentionally minimal so nothing is applied by accident.
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  # NOTE: no `automated:` block => manual sync only (safe).
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false
+
+  info:
+    - name: Mode
+      value: Manual sync (self-manage). Align chart version/values first.
