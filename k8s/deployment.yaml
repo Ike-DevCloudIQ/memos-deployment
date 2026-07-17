@@ -73,7 +73,7 @@ spec:
       
       containers:
       - name: memos
-        image: 184353012435.dkr.ecr.eu-west-1.amazonaws.com/memos:ca3b941
+        image: 184353012435.dkr.ecr.eu-west-1.amazonaws.com/memos:dada49f
         imagePullPolicy: IfNotPresent
         
         ports:
