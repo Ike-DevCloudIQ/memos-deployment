@@ -24,16 +24,8 @@ metadata:
   name: memos-db-secret
   namespace: memos
 type: Opaque
-stringData:
-  # Database connection details
-  # These will be populated from Secrets Manager by deployment script
-  DB_HOST: "memos-postgres.c9akciq32.us-west-1.rds.amazonaws.com"
-  DB_PORT: "5432"
-  DB_NAME: "memos"
-  DB_USER: "memos_user"
-  DB_PASSWORD: "CHANGE_ME_FROM_SECRETS_MANAGER"
-  # Full connection string
-  DSN: "postgresql://memos_user:CHANGE_ME@memos-postgres.c9akciq32.us-west-1.rds.amazonaws.com:5432/memos?sslmode=disable"
+# Data is managed out-of-band from AWS Secrets Manager and intentionally omitted.
+# Argo CD is configured to ignore /data drift for this Secret.
 ---
 apiVersion: apps/v1
 kind: Deployment
