@@ -70,9 +70,10 @@ jobs:
           context: src/memos                # Build from vendored Memos source
           file: app/Dockerfile              # Path to Dockerfile
           push: true                        # Push to ECR after build
+          # ECR repo is IMMUTABLE: only push the unique SHA tag.
+          # Do NOT push :latest — an immutable tag can't be overwritten on re-runs.
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.meta.outputs.tag }}
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
   # ==============================================================
   # Job 2: Update Kubernetes manifest with new image tag
