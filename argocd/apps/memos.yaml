@@ -11,6 +11,16 @@ metadata:
 spec:
   project: memos-project
 
+  # Keep secret values managed out-of-band while still managing the Secret object.
+  # This prevents Argo from overwriting runtime credentials with placeholder values.
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: memos-db-secret
+      namespace: memos
+      jsonPointers:
+        - /data
+
   source:
     repoURL: https://github.com/Ike-DevCloudIQ/memos-deployment
     targetRevision: HEAD
@@ -27,6 +37,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - PruneLast=true
+      - RespectIgnoreDifferences=true
 
   info:
     - name: Repository

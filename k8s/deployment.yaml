@@ -14,8 +14,7 @@ data:
   # Application configuration
   MEMOS_PORT: "5230"
   MEMOS_MODE: "prod"
-  DRIVER: "postgres"
-  DSN_DRIVER: "postgres"
+  MEMOS_DRIVER: "postgres"
   # Logging
   LOG_LEVEL: "info"
 ---
@@ -122,7 +121,7 @@ spec:
             secretKeyRef:
               name: memos-db-secret
               key: DB_PASSWORD
-        - name: DSN
+        - name: MEMOS_DSN
           valueFrom:
             secretKeyRef:
               name: memos-db-secret
